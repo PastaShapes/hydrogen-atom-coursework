@@ -18,6 +18,7 @@ def potential(r, l=0):
         1D array of potential values V(r)
     """
 
+    # The potential energy function for the hydrogen atom in dimensionless units
     V = -2/r + l*(l+1)/r**2
 
     return V
@@ -51,7 +52,8 @@ def hamiltonian(r, V):
             K[i, i+1] = -1/(dr**2)
     """
 
-    # I used ChatGPT to help generate the tridiagonal matrix for the kinetic energy operator, which is a faster and more lightweight version of the commented out code above.
+    # Here we generate the tridiagonal matrix for the kinetic energy operator, by a which is a faster and more lightweight version of the commented out code above.
+    # To improve computational efficiency, we use numpy's diag function to create a diagonal matrix which avoids using slow python for-loops (adapted via GPT suggestion)
     K = np.diag(np.full(len(r), 2 / dr**2))
     K += np.diag(np.full(len(r)-1, -1 / dr**2), k=1)
     K += np.diag(np.full(len(r)-1, -1 / dr**2), k=-1)
@@ -75,13 +77,18 @@ def eigenvalues():
         1D array of eigenvalues of the H atom
     """
 
+    # No. of points - we choose 2500s to have a sufficient amount of points to mitigate error but small enough to maintain reasonable performance
     num_points = 2500
-    r = np.linspace(0, 250, num_points)[1:]
+    # Lower bound - we start the linspace at 0 but slice [1:] to avoid division by zero
+    # Upper bound - we choose 250 as the upper bound to ensure we capture the first 10 bound states without box confinement errors
+    r = np.linspace(0, 250, num_points + 1)[1:]
     
     V = potential(r, l=0)
     H = hamiltonian(r, V)
 
-    # We use the numpy linear algebra module to compute the eigenvalues of the Hamiltonian, also .eigh() auto-sorts to ascending order
+    # We use the numpy linear algebra module to compute the eigenvalues of the Hamiltonian
+    # GPT suggested .eigh() (rather than .eig()) as this uses an algorithm that takes advantage of the matrix's symmetry 
+    # .eigh() and also auto-sorts to ascending order
     eigenvals, _ = np.linalg.eigh(H)
 
     return eigenvals
@@ -92,12 +99,11 @@ def validate():
     Plots a few visualisations so we can validate the code as well as comparing results to expected values
     """
 
-    # no. of points - we choose 2500s to have a sufficient amount of points to mitigate error but small enough to maintain reasonable performance
+    # No. of points - we choose 2500s to have a sufficient amount of points to mitigate error but small enough to maintain reasonable performance
     num_points = 2500
-    # lower bound - we start the linspace at 0 but slice [1:] to avoid division by zero
-    # upper bound - we choose 250 as the upper bound to ensure we capture the first 10 bound states without box confinement errors
-
-    r = np.linspace(0, 250, num_points)[1:]
+    # Lower bound - we start the linspace at 0 but slice [1:] to avoid division by zero
+    # Upper bound - we choose 250 as the upper bound to ensure we capture the first 10 bound states without box confinement errors
+    r = np.linspace(0, 250, num_points + 1)[1:]
     V = potential(r)
     H = hamiltonian(r, V)
     eigenvals = eigenvalues()
@@ -115,7 +121,6 @@ def validate():
     plt.imshow(H[:30, :30], cmap='hot', interpolation='nearest')
     plt.title("Hamiltonian Matrix (Top Left)")
     plt.colorbar()
-    
     plt.tight_layout()
     plt.show()
 
@@ -126,13 +131,12 @@ def validate():
     print("Energy eigenvalues of the H atom (in ascending order):")
     print(eigenvals[:10])  # print the first 10 eigenvalues
 
-
     # Comparison with simple harmonic oscillator potential
     x = np.linspace(-10, 10, num_points)
     V_SHO = x**2
 
     H_SHO = hamiltonian(x, V_SHO)
-    eigenvals_SHO, _ = np.linalg.eig(H_SHO)
+    eigenvals_SHO, _ = np.linalg.eigh(H_SHO)
     eigenvals_SHO = np.sort(eigenvals_SHO)
 
     print("\nAnalytical energy eigenvalues of the Simple Harmonic Oscillator (in ascending order):")
